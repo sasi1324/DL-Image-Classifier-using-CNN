@@ -7,291 +7,208 @@ To develop a convolutional neural network (CNN) classification model for the giv
 The MNIST dataset consists of 70,000 grayscale images of handwritten digits (0-9), each of size 28×28 pixels. The task is to classify these images into their respective digit categories. CNNs are particularly well-suited for image classification tasks as they can automatically learn spatial hierarchies of features through convolutional layers, pooling layers, and fully connected layers.
 
 ## Neural Network Model
-![image](https://github.com/user-attachments/assets/4d43ccc3-3af5-4ed3-b59a-bb5d804dd19f)
-
+Include the neural network model diagram.
 
 ## DESIGN STEPS
-### STEP 1: Define the problem
-Classify handwritten digits (0–9) using the MNIST dataset.
+### STEP 1: 
 
-### STEP 2: Import libraries and dataset
-Import required libraries such as TensorFlow/Keras, NumPy, and Matplotlib.
-Load the MNIST dataset using keras.datasets.mnist.load_data().
+Import necessary libraries for PyTorch, torchvision, visualization, and evaluation metrics.
 
+### STEP 2: 
 
-### STEP 3: Preprocess the data
-Normalize the image pixel values (scale from 0-255 to 0-1).
-Reshape the images to match CNN input shape.
+Define image transformations: convert tensors and normalize dataset between -1 and 1.
 
 
-### STEP 4: Build the CNN model
-Initialize a Sequential model.
-Add convolutional layers with activation (ReLU), followed by pooling layers.
-Flatten the output and add Dense layers.
-Use a softmax layer for classification.
+### STEP 3: 
+
+Load MNIST training and testing datasets with transformations and enable downloading automatically.
 
 
-### STEP 5: Compile and train the model
-Compile the model with an optimizer (e.g., Adam), loss function (e.g., categorical crossentropy), and metrics (accuracy).
-Train the model using training data and validate using validation split or test data.
+### STEP 4: 
+
+Create DataLoader objects for training and testing datasets with batch processing.
 
 
-### STEP 6: Evaluate and visualize results
-Evaluate the model on test data and print accuracy.
-Plot training/validation loss and accuracy curves.
-Optionally, display a confusion matrix or sample predictions.
+### STEP 5: 
+
+Define CNNClassifier class with convolution, pooling, and fully connected layers.
 
 
+### STEP 6: 
 
+Implement forward function using ReLU activations, pooling, and flattening before classification.
+
+### STEP 7: 
+
+Initialize CNN model, move to GPU if available, and display summary.
+
+### STEP 8:
+
+Define cross-entropy loss function and Adam optimizer with learning rate 0.001.
+
+
+### STEP 9:
+
+Train model for epochs: forward pass, compute loss, backpropagate, and update parameters.
+
+
+### STEP 10: 
+
+Test model: predict outputs, calculate accuracy, store predictions, and generate confusion matrix.
+
+### STEP 11: 
+
+Visualize confusion matrix using heatmap and display classification report with precision metrics.
+
+
+### STEP 12: 
+
+Predict single image: load from dataset, infer, and display actual-predicted labels.
 
 ## PROGRAM
-```
-!pip uninstall -y torch torchvision torchaudio
-!pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
 
+### Name:SASINTHARA S
+
+### Register Number:212223110045
+```
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
+import torch.optim as optim
+import torchvision
+import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
-from torchvision import datasets, transforms
-from torchvision.utils import make_grid
-
-import numpy as np
-import pandas as pd 
-from sklearn.metrics import confusion_matrix,classification_report
 import matplotlib.pyplot as plt
-%matplotlib inline
-
-transform = transforms.ToTensor()
-
-train_data = datasets.MNIST(root='../Data', train=True, download=True, transform=transform)
-test_data = datasets.MNIST(root='../Data', train=False, download=True, transform=transform)
-
-train_data
-test_data
-
-train_loader = DataLoader(train_data, batch_size=10, shuffle=True)
-test_loader = DataLoader(test_data, batch_size=10, shuffle=False)
-
-# 1 colour channel, 6 filter(output channel) 3 x 3 kernal , stride = 1
-conv1 = nn.Conv2d(1,6,3,1) # ---> 6 filters ---> pooling ---> conv2
-# 6 input filters conv1, 16 filters, 3 x 3 kernal, stride = 1
-conv2 = nn.Conv2d(6,16,3,1)
-
-# Grab the first MNIST record
-for i, (X_train, y_train) in enumerate(train_data):
-    break
-
-X_train
-
-X_train.shape
-
-x = X_train.view(1,1,28,28)  # 4D batch ( batch of 1 image)
-x
-
-x = F.relu(conv1(x))
-x.shape
-
-x = F.max_pool2d(x,2,2)
-x.shape
-x = F.relu(conv2(x))
-
-x.shape
-
-x = F.max_pool2d(x,2,2)
-x.shape
-11/2
-(((28-2)/2) -2)/2
-
-# flatten 
-x.shape
-x.view(-1,16*5*5).shape
-
-class ConvolutionalNetwork(nn.Module):
-
+import numpy as np
+from sklearn.metrics import confusion_matrix, classification_report
+import seaborn as sns
+transform = transforms.Compose([
+    transforms.ToTensor(),          
+    transforms.Normalize((0.5,), (0.5,))
+])
+train_dataset = torchvision.datasets.MNIST(root="./data", train=True, transform=transform, download=True)
+test_dataset = torchvision.datasets.MNIST(root="./data", train=False, transform=transform, download=True)
+image, label = train_dataset[0]
+print("Image shape:", image.shape)
+print("Number of training samples:", len(train_dataset))
+train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
+test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False)
+class CNNClassifier(nn.Module):
     def __init__(self):
-        super().__init__()
-        self.conv1 = nn.Conv2d(1,6,3,1)
-        self.conv2 = nn.Conv2d(6,16,3,1)
-        self.fc1 = nn.Linear(5*5*16,120)
-        self.fc2 = nn.Linear(120,84)
-        self.fc3 = nn.Linear(84,10)
+        super(CNNClassifier, self).__init__()
+        self.conv1 = nn.Conv2d(1, 32, kernel_size=3, padding=1)
+        self.pool = nn.MaxPool2d(2, 2)
+        self.conv2 = nn.Conv2d(32, 64, kernel_size=3, padding=1)
+        self.fc1 = nn.Linear(64 * 7 * 7, 128)
+        self.fc2 = nn.Linear(128, 10)
+        self.dropout = nn.Dropout(0.3)
+        self.relu = nn.ReLU()
 
-    def forward(self, X):
-        X = F.relu(self.conv1(X))
-        X = F.max_pool2d(X, 2, 2)
-        X = F.relu(self.conv2(X))
-        X = F.max_pool2d(X, 2, 2)
-        X = X.view(-1, 5*5*16)
-        X = F.relu(self.fc1(X))
-        X = F.relu(self.fc2(X))
-        X = self.fc3(X)
-        return F.log_softmax(X, dim=1)
+    def forward(self, x):
+        x = self.relu(self.conv1(x))
+        x = self.pool(x)
+        x = self.relu(self.conv2(x))
+        x = self.pool(x)
+        x = x.view(-1, 64 * 7 * 7)   # flatten
+        x = self.relu(self.fc1(x))
+        x = self.dropout(x)
+        x = self.fc2(x)
+        return x
+from torchsummary import summary
+model = CNNClassifier()
 
+if torch.cuda.is_available():
+    device = torch.device("cuda")
+    model.to(device)
+summary(model, input_size=(1, 28, 28))
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print("Using device:", device)
 
-torch.manual_seed(42)
-model = ConvolutionalNetwork()
-model
-
-for param in model.parameters():
-    print(param.numel())
-
+model = CNNClassifier().to(device)
 criterion = nn.CrossEntropyLoss()
-optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+optimizer = optim.Adam(model.parameters(), lr=0.001)
+def train_model(model, train_loader, num_epochs=5):
+    for epoch in range(num_epochs):
+        model.train()
+        running_loss = 0.0
 
-import time
-start_time = time.time()
+        for images, labels in train_loader:
+            images, labels = images.to(device), labels.to(device)
 
-# Variables ( Trackers)
-epochs = 5
-train_losses = []
-test_losses = []
-train_correct = []
-test_correct = []
+            optimizer.zero_grad()
+            outputs = model(images)
+            loss = criterion(outputs, labels)
+            loss.backward()
+            optimizer.step()
 
-# for loop epochs 
-for i in range(epochs):
-    
-    trn_corr = 0
-    tst_corr = 0
-
-
-    # Run the training batches
-    for b, (X_train, y_train) in enumerate(train_loader):
-        b+=1
-        
-        # Apply the model
-        y_pred = model(X_train)  # we not flatten X-train here
-        loss = criterion(y_pred, y_train)
- 
-        
-        predicted = torch.max(y_pred.data, 1)[1]
-        batch_corr = (predicted == y_train).sum()  # Trure 1 / False 0 sum()
-        trn_corr += batch_corr
-        
-        # Update parameters
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
-        
-        # Print interim results
-        if b%600 == 0:
-            print(f'epoch: {i}  batch: {b} loss: {loss.item()}')
-        
-    train_losses.append(loss)
-    train_correct.append(trn_corr)
-        
-    # Run the testing batches
-    with torch.no_grad():
-        for b, (X_test, y_test) in enumerate(test_loader):
-
-            # Apply the model
-            y_val = model(X_test)
-
-            # Tally the number of correct predictions
-            predicted = torch.max(y_val.data, 1)[1] 
-            tst_corr += (predicted == y_test).sum()
-            
-    loss = criterion(y_val, y_test)
-    test_losses.append(loss)
-    test_correct.append(tst_corr)
-        
-current_time = time.time()
-total = current_time - start_time
-print(f'Training took {total/60} minutes')
-
-# Detach and convert to NumPy
-train_losses = [t.detach().numpy() for t in train_losses]
-test_losses = [t.detach().numpy() for t in test_losses]
-
-plt.plot(train_losses, label='training loss')
-plt.plot(test_losses, label='validation loss')
-plt.title('Loss at the End of Each Epoch\nBy JAIGANESH')
-plt.legend();
-plt.show()
-
-plt.plot([t/600 for t in train_correct], label='training accuracy')
-plt.plot([t/100 for t in test_correct], label='validation accuracy')
-plt.title('Accuracy at the end of each epoch\nBy JAIGANESH')
-plt.legend();
-plt.show()
-
-# Extract the data all at once, not in batches
-test_load_all = DataLoader(test_data, batch_size=10000, shuffle=False)
-
-with torch.no_grad():
+            running_loss += loss.item()
+        print(f'Epoch [{epoch+1}/{num_epochs}], Loss: {running_loss/len(train_loader):.4f}')
+train_model(model, train_loader, num_epochs=10)
+def test_model(model, test_loader):
+    model.eval()
     correct = 0
-    for X_test, y_test in test_load_all:
-        y_val = model(X_test)  # we don't flatten the data this time
-        predicted = torch.max(y_val,1)[1]
-        correct += (predicted == y_test).sum()
+    total = 0
+    all_preds = []
+    all_labels = []
 
-correct.item()
-correct.item()/len(test_data)
+    with torch.no_grad():
+        for images, labels in test_loader:
+            if torch.cuda.is_available():
+                images, labels = images.to(device), labels.to(device)
 
-# print a row of values for reference
-np.set_printoptions(formatter=dict(int=lambda x: f'{x:4}'))
-print(np.arange(10).reshape(1,10))
-print()
+            outputs = model(images)
+            _, predicted = torch.max(outputs, 1)
+            total += labels.size(0)
+            correct += (predicted == labels).sum().item()
+            all_preds.extend(predicted.cpu().numpy())
+            all_labels.extend(labels.cpu().numpy())
 
-# print the confusion matrix
-print(confusion_matrix(predicted.view(-1), y_test.view(-1)))
-print("JAIGANESH S")
+    accuracy = correct / total
+    print(f'Test Accuracy: {accuracy:.4f}')
+    
+    cm = confusion_matrix(all_labels, all_preds)
+    plt.figure(figsize=(8, 6))
+    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', xticklabels=test_dataset.classes, yticklabels=test_dataset.classes)
+    plt.xlabel('Predicted')
+    plt.ylabel('Actual')
+    plt.title('Confusion Matrix')
+    plt.show()
 
-# single image for test 
-plt.imshow(test_data[2019][0].reshape(28,28))
-plt.show()
+    print("Classification Report:")
+    print(classification_report(all_labels, all_preds, target_names=[str(i) for i in range(10)]))
+test_model(model, test_loader)
+def predict_image(model, image_index, dataset):
+    model.eval()
+    image, label = dataset[image_index]
+    if torch.cuda.is_available():
+        image = image.to(device)
 
-model.eval()
-with torch.no_grad():
-    new_prediction = model(test_data[2019][0].view(1,1,28,28))
+    with torch.no_grad():
+        output = model(image.unsqueeze(0))
+        _, predicted = torch.max(output, 1)
 
-new_prediction.argmax()
-
-# Convert tensors to NumPy arrays
-y_true = y_test.view(-1).cpu().numpy()
-y_pred = predicted.view(-1).cpu().numpy()
-
-# Print classification report
-print("Classification Report by JAIGANESH\n")
-print(classification_report(y_true, y_pred))
-
-
-# single image for test 
-plt.imshow(test_data[333][0].reshape(28,28))
-plt.show()
-model.eval()
-with torch.no_grad():
-    new_prediction = model(test_data[333][0].view(1,1,28,28))
-
-new_prediction.argmax()
-
-test_data[333][1]
+    class_names = [str(i) for i in range(10)]
+    plt.imshow(image.cpu().squeeze(), cmap="gray")
+    plt.title(f'Actual: {class_names[label]}\nPredicted: {class_names[predicted.item()]}')
+    plt.axis("off")
+    plt.show()
+    print(f'Actual: {class_names[label]}, Predicted: {class_names[predicted.item()]}')
+predict_image(model, image_index=80, dataset=test_dataset)
 ```
-### Name: SASINTHARA S
-
-### Register Number: 212223110045
-
 ### OUTPUT
+<img width="636" height="462" alt="image" src="https://github.com/user-attachments/assets/74d01a6c-c2a7-4a78-9a8d-63dfaccf98ca" />
 
 ## Training Loss per Epoch
-![image](https://github.com/user-attachments/assets/f787a125-a266-490d-a32e-c4f436faf88d)
-
-
+<img width="287" height="212" alt="image" src="https://github.com/user-attachments/assets/71d5cc09-7edd-4c48-8825-a317e76797e4" />
 
 ## Confusion Matrix
-![image](https://github.com/user-attachments/assets/989ba744-6535-491b-8814-c3f6b0b7a02e)
-
-
+<img width="832" height="696" alt="image" src="https://github.com/user-attachments/assets/bfde4823-fafb-4ecc-9738-3ef04625e7bd" />
 
 ## Classification Report
-![image](https://github.com/user-attachments/assets/ecf3ac71-848e-405a-91dd-3c1721b68412)
-
-
+<img width="517" height="362" alt="image" src="https://github.com/user-attachments/assets/a30cade5-d7c1-4d0b-b906-95bf965a4ec1" />
 
 ### New Sample Data Prediction
-![image](https://github.com/user-attachments/assets/d256b4f5-0d75-4683-84aa-eb3708678fd0)
-
+<img width="490" height="528" alt="image" src="https://github.com/user-attachments/assets/565e3c45-b707-4681-87c7-7bace8892c3d" />
 
 ## RESULT
-The CNN model achieved high accuracy on the MNIST dataset, with training and validation losses showing good convergence. The classification report and confusion matrix confirmed strong performance across all digits, with minimal misclassifications. Overall, the model performs reliably in handwritten digit recognition.
+Developing a convolutional neural network (CNN) classification model for the given dataset was executed successfully.
+
